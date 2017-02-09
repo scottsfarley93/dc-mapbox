@@ -55,7 +55,7 @@
     for (i =0 ; i < numPoints; i++){
       lat= Math.floor(Math.random() * 90);
       lng = Math.floor(Math.random() * -180);
-      p = {lat: lat, lng: lng}
+      p = new mapboxgl.LngLat(lng, lat)
       locs.push(p)
     }
 
@@ -63,7 +63,7 @@
       locations = crossfilter(locs)
       allGroup = locations.groupAll()
 
-      locationsDimension = locations.dimension(function(d){return [d.lng, d.lat]})
+      locationsDimension = locations.dimension(function(d){return d})
       locationsGrouping = locationsDimension.group().reduceCount()
 
       latsDimension = locations.dimension(function(d){return d.lat})
@@ -72,6 +72,7 @@
       var mapz = dc_mapbox.markerChart("#map", undefined, myToken, mapOptions)
         .dimension(locationsDimension)
         .group(locationsGrouping)
+        .brushOn(true)
       //   // .render()
 
     // dc_leaflet.markerChart("#map")
@@ -79,7 +80,7 @@
     //   .group(locationsGrouping)
 
 
-      var bottom = dc.barChart("#bottomChart")
+      var bottom = dc.barChart("#bottomChart", undefined)
         .height($("body").height() * 0.20)
         .width($("body").width())
         .x(d3.scale.linear().domain(d3.extent(locs, function(d){return d.lat})))

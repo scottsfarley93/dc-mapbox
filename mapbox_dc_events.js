@@ -114,11 +114,13 @@
 
         var _toGeoJson = function(data){
           features = []
+          _id = 0
           data.forEach(function(d){
-            lat = d.key[1]
-            lng = d.key[0]
-            m = JSON.parse('{"type": "Feature", "geometry": {"type": "Point", "coordinates": ['+ lng +','+ lat+']}, "properties" : {"key":"value"} }')
+            d.lat = d.key.lat
+            d.lng = d.key.lng
+            m = JSON.parse('{"type": "Feature", "geometry": {"type": "Point", "coordinates": ['+ d.lng +','+ d.lat+']}, "properties" : ' + JSON.stringify(d) + ' }')
             features.push(m)
+            _id += 1
           }) // end forEach
 
           return features
@@ -176,233 +178,117 @@
 
         _chart._postRender = function() {
           console.log("Post Render")
-          // //execute geoBounds filter after moving or zooming
-          //   if (_chart.brushOn()) {
-          //       if (_filterByArea) {
-          //         //execute filter
-          //           _chart.filterHandler(doFilterByArea);
-          //       }
-          //
-          //       _chart.map().on('zoomend moveend', zoomFilter, this );
-          //       if (!_filterByArea)
-          //           _chart.map().on('click', zoomFilter, this );
-          //       _chart.map().on('zoomstart', zoomStart, this);
-          //   }
+
+            _chart.filterHandler(testFilterHandler);
+
           _addMarkers()
         };
 
+        var testFilterHandler = function(filter, filters){
+          _chart.dimension().filter(null);
+          //signal to other charts that they need to be updated
+          //communicate via crossfilter
+          if (filters && filters.length>0) {
+              _chart.dimension().filterFunction(function(d) {
+                var doesContain = contains(filters[0], d) //check if the filter bounds include each point
+                return doesContain
+              });
+              filterToArray(filters[0])
+          } // end if
+        }
+
+        var filterToArray = function(filter){
+          var ne = filter.getNorthEast()
+          var sw = filter.getSouthWest()
+          _chart.map().setFilter("points", ['all', [">", "lat", sw.lat], ['<', 'lat', ne.lat], ['>', 'lng', sw.lng], ['<', 'lng', ne.lng]])
+        }
+
         _chart._doRedraw = function() {
-          console.log("Do redraw")
-            // var groups = _chart._computeOrderedGroups(_chart.data()).filter(function (d) {
-            //     return _chart.valueAccessor()(d) !== 0;
-            // });
-            // if (_currentGroups && _currentGroups.toString() === groups.toString()) {
-            //     return;
-            // }
-            // _currentGroups=groups;
-            //
-            // if (_rebuildMarkers) {
-            //     _markerList=[];
-            // }
-            // _layerGroup.clearLayers();
-            //
-            // var addList=[];
-            // var cList = []
-            // groups.forEach(function(v,i) {
-            //     var key = _chart.keyAccessor()(v);
-            //     var marker = null;
-            //     if (!_rebuildMarkers && key in _markerList) {
-            //         marker = _markerList[key];
-            //     }
-            //     else {
-            //         marker = createmarker(v,key);
-            //     }
-            //     if (!_chart.cluster()) {
-            //         _layerGroup.addLayer(marker);
-            //         cList.push(marker)
-            //     }
-            //     else {
-            //         addList.push(marker);
-            //     }
-            // });
-            //
-            // if (cList.length > 0 || addList.length > 0){
-            //   _chart.markersOn = true
-            // }else{
-            //   _chart.markersOn = false
-            // }
-            //
-            // if (_chart.cluster() && addList.length > 0) {
-            //     _layerGroup.addLayers(addList);
-            // }
+
+          // console.log(_chart.filters())
+            var groups = _chart._computeOrderedGroups(_chart.data()).filter(function (d) {
+                return _chart.valueAccessor()(d) !== 0;
+            });
         };
 
         //accessor functions
         _chart.locationAccessor = function(_) {
-            // if (!arguments.length) {
-            //     return _location;
-            // }
-            // _location= _;
-            // return _chart;
+            if (!arguments.length) {
+                return _location;
+            }
+            _location= _;
+            return _chart;
         };
 
-        // _chart.marker = function(_) {
-        //     // if (!arguments.length) {
-        //     //     return _marker;
-        //     // }
-        //     // _marker= _;
-        //     // return _chart;
-        // };
+        _chart.brushOn = function(_) {
+            if (!arguments.length) {
+                return _brushOn;
+            }
+            _brushOn = _;
+            return _chart;
+        };
+
+        var contains = function(bounds, point){
+        		var sw = bounds.getSouthWest(),
+        		    ne = bounds.getNorthEast()
+        		return (point.lat >= sw.lat) && (point.lat <= ne.lat) &&
+        		       (point.lng >= sw.lng) && (point.lng <= ne.lng);
+        }
+
+
+        var zoomFilter = function(e) {
+          //geoBounds filter function
+            if (e.type === "moveend" && (_zooming || e.hard)) {
+                return;
+            }
+            _zooming=false;
+
+            if (_filterByArea) {
+                var filter;
+                if (_chart.map().getCenter().equals(_chart.center()) && _chart.map().getZoom() === _chart.zoom()) {
+                  //there was no change, so don't filter
+                    filter = null;
+                }else {
+                  //a change occurred, filter
+                    filter = _chart.map().getBounds();
+                }
+                dc.events.trigger(function () {
+                  //redraw all dashboard charts
+                    _chart.filter(null);
+                    if (filter) {
+                        _innerFilter=true;
+                        _chart.filter(filter);
+                        _innerFilter=false;
+                    }
+                    dc.redrawAll(_chart.chartGroup()); //do redraw
+                });
+            }
+        };
         //
-        // _chart.icon = function(_) {
-        //     if (!arguments.length) {
-        //         return _icon;
-        //     }
-        //     _icon= _;
-        //     return _chart;
-        // };
+        var doFilterByArea = function(dimension, filters) {
+            _chart.dimension().filter(null);
+            if (filters && filters.length>0) {
+                _chart.dimension().filterFunction(function(d) {
+                    if (!(d in _markerList)) {
+                        return false;
+                    }
+                    var locO = _markerList[d].getLatLng();
+                    return locO && filters[0].contains(locO);
+                });
+                if (!_innerFilter && _chart.map().getBounds().toString !== filters[0].toString()) {
+                    _chart.map().fitBounds(filters[0]);
+                }
+            }
+        };
         //
-        // _chart.popup = function(_) {
-        //     if (!arguments.length) {
-        //         return _popup;
-        //     }
-        //     _popup= _;
-        //     return _chart;
-        // };
-        //
-        // _chart.renderPopup = function(_) {
-        //     if (!arguments.length) {
-        //         return _renderPopup;
-        //     }
-        //     _renderPopup = _;
-        //     return _chart;
-        // };
-        //
-        //
-        // _chart.cluster = function(_) {
-        //     if (!arguments.length) {
-        //         return _cluster;
-        //     }
-        //     _cluster = _;
-        //     return _chart;
-        // };
-        //
-        // _chart.clusterOptions = function(_) {
-        //     if (!arguments.length) {
-        //         return _clusterOptions;
-        //     }
-        //     _clusterOptions = _;
-        //     return _chart;
-        // };
-        //
-        // _chart.rebuildMarkers = function(_) {
-        //     if (!arguments.length) {
-        //         return _rebuildMarkers;
-        //     }
-        //     _rebuildMarkers = _;
-        //     return _chart;
-        // };
-        //
-        // _chart.brushOn = function(_) {
-        //     if (!arguments.length) {
-        //         return _brushOn;
-        //     }
-        //     _brushOn = _;
-        //     return _chart;
-        // };
-        //
-        // _chart.filterByArea = function(_) {
-        //     if (!arguments.length) {
-        //         return _filterByArea;
-        //     }
-        //     _filterByArea = _;
-        //     return _chart;
-        // };
-        //
-        // _chart.markerGroup = function() {
-        //     return _layerGroup;
-        // };
-        //
-        // var createmarker = function(v,k) {
-        //     var marker = _marker(v);
-        //     marker.key = k;
-        //     siteID = k.alt // hack --> id is the site id, function in main.js
-        //     siteDetails = lookupSite(siteID) //could be list, because multiple samples at one site
-        //     siteName = siteDetails.SiteName
-        //     html = siteName
-        //     html += "<br />"
-        //     html += "<a href='javascript:void(0);' onclick='openSiteDetails(" + siteID + ");'>Details</a>"
-        //     if (_chart.renderPopup()) {
-        //         marker.bindPopup(html);
-        //     }
-        //     if (_chart.brushOn() && !_filterByArea) {
-        //         marker.on("click",selectFilter);
-        //     }
-        //     _markerList[k]=marker;
-        //     return marker;
-        // };
-        //
-        // var zoomStart = function(e) {
-        //     _zooming=true;
-        // };
-        //
-        // var zoomFilter = function(e) {
-        //   //geoBounds filter function
-        //     if (e.type === "moveend" && (_zooming || e.hard)) {
-        //         return;
-        //     }
-        //     _zooming=false;
-        //
-        //     if (_filterByArea) {
-        //         var filter;
-        //         if (_chart.map().getCenter().equals(_chart.center()) && _chart.map().getZoom() === _chart.zoom()) {
-        //           //there was no change, so don't filter
-        //             filter = null;
-        //         }else if (!_chart.markersOn){
-        //           //pass
-        //           return
-        //         }
-        //         else {
-        //           //a change occurred, filter
-        //             filter = _chart.map().getBounds();
-        //         }
-        //         dc.events.trigger(function () {
-        //           //redraw all dashboard charts
-        //             _chart.filter(null);
-        //             if (filter) {
-        //                 _innerFilter=true;
-        //                 _chart.filter(filter);
-        //                 _innerFilter=false;
-        //             }
-        //             dc.redrawAll(_chart.chartGroup()); //do redraw
-        //         });
-        //     }
-        // };
-        //
-        // var doFilterByArea = function(dimension, filters) {
-        //     _chart.dimension().filter(null);
-        //     if (filters && filters.length>0) {
-        //         _chart.dimension().filterFunction(function(d) {
-        //             if (!(d in _markerList)) {
-        //                 return false;
-        //             }
-        //             var locO = _markerList[d].getLatLng();
-        //             return locO && filters[0].contains(locO);
-        //         });
-        //         if (!_innerFilter && _chart.map().getBounds().toString !== filters[0].toString()) {
-        //             _chart.map().fitBounds(filters[0]);
-        //         }
-        //     }
-        // };
-        //
-        // var selectFilter = function(e) {
-        //     if (!e.target) return;
-        //     var filter = e.target.key;
-        //     dc.events.trigger(function () {
-        //         _chart.filter(filter);
-        //         dc.redrawAll(_chart.chartGroup());
-        //     });
-        // };
+        var selectFilter = function(e) {
+            if (!e.target) return;
+            var filter = e.target.key;
+            dc.events.trigger(function () {
+                _chart.filter(filter);
+                dc.redrawAll(_chart.chartGroup());
+            });
+        };
 
         return _chart.anchor(parent, chartGroup);
     };

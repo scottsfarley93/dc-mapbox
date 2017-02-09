@@ -412,7 +412,7 @@
             // });
         };
 
-        return _chart
+        return _chart.anchor(parent, chartGroup);
     };
 
   dc_leaflet.d3 = d3;
