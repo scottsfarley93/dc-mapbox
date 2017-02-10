@@ -38,7 +38,7 @@
         };
 
         _chart._doRender = function() {
-                      console.log("base rendering.")
+            console.log("base rendering.")
           //render the map
             if(! _chart.map()){
                 _map = _createMap(_chart.root());
@@ -46,7 +46,7 @@
                     _map.on(ev, _cachedHandlers[ev]);
 
                 if (_defaultCenter && _defaultZoom) {
-                    _map.setCenter([0,0]).setZoom(2)
+                    _map.setCenter(_mapOptions.center).setZoom(_mapOptions.zoom)
                 }
                 _chart._postRender(); //called after render is complete
             }
@@ -177,13 +177,15 @@
         // };
 
         _chart._postRender = function() {
-          console.log("Post Render")
 
           //register the filter handler
             _chart.filterHandler(doFilterByArea);
 
           //register filter event listeners
           _chart.map().on('moveend', zoomFilter);
+          _chart.map().on('zoomend', zoomFilter);
+
+          console.log('post')
 
           _addMarkers()
         };
@@ -197,23 +199,35 @@
                 var doesContain = contains(filters[0], d) //check if the filter bounds include each point
                 return doesContain
               });
-              filterToArray(filters[0])
+              filterToBounds(filters[0])
           } // end if
         }
 
-        var filterToArray = function(filter){
-          var ne = filter.getNorthEast()
-          var sw = filter.getSouthWest()
+        var filterToBounds = function(bounds){
+          var ne = bounds.getNorthEast()
+          var sw = bounds.getSouthWest()
           _chart.map().setFilter('points', null)
           _chart.map().setFilter("points", ['all', [">", "lat", sw.lat], ['<', 'lat', ne.lat], ['>', 'lng', sw.lng], ['<', 'lng', ne.lng]])
         }
 
         _chart._doRedraw = function() {
 
-          // console.log(_chart.filters())
-            var groups = _chart._computeOrderedGroups(_chart.data()).filter(function (d) {
-                return _chart.valueAccessor()(d) !== 0;
-            });
+          console.log("redrawing")
+            var groups = _chart._computeOrderedGroups(_chart.data())
+
+          var groupsFiltered = groups.filter(function (d) {
+              return _chart.valueAccessor()(d) !== 0;
+          });
+
+          _filteredLats = []
+          _filteredLngs = []
+          groupsFiltered.forEach(function(d){
+            _filteredLngs.push(d.lng)
+            _filteredLats.push(d.lat)
+          })
+
+
+          _chart.map().setFilter("points", ["all", ["in", "lat"].concat(_filteredLats), ["in", "lng"].concat(_filteredLngs)])
         };
 
         var zoomFilter = function(){
