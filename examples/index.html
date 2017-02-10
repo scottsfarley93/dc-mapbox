@@ -3,8 +3,8 @@
 <head>
     <link href='https://api.tiles.mapbox.com/mapbox-gl-js/v0.32.1/mapbox-gl.css' rel='stylesheet' />
     <link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/dc/1.7.5/dc.css"/>
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.0.2/dist/leaflet.css" />
-    <script src="https://unpkg.com/leaflet@1.0.2/dist/leaflet.js"></script>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap-theme.min.css" integrity="sha384-rHyoN1iRsVXV4nD0JutlnGaslCJuC7uwjduW9SVrLvRYooPp2bWYgmgJQIXwl/Sp" crossorigin="anonymous">
 
     <style>
       html, body{
@@ -17,39 +17,66 @@
       }
 
       #map{
-        height: 70%!important;
-        width: 100% !important;
+        height: 50%!important;
+      }
+
+      #dashboardTop{
+        height: 25%;
+      }
+
+      #dashboardBottom{
+        height: 25%;
+        overflow-y: auto;
+      }
+
+
+      #dateChart{
+        height: 100%;
       }
 
       .pieChart{
         height: 100%;
-        width: 20%;
-        padding: 5%;
+        padding: 0px;
+        margin: 0px;
       }
 
 
-      #dashboard{
-        height: 30%;
-        width: 100%;
-        background-color: black;
+      .axis path, .axis line{
+          fill: none;
+          stroke: white;
+          shape-rendering: crispEdges;
+          stroke-width: 2px;
+          color: white;
       }
 
+      .domain{
+        stroke: white!important;
+        fill: none!important;
+      }
 
+      .axis text {
+        fill: white;
+      }
 
     </style>
   </head>
 
   <body>
-    <div id='map' ></div>
-
-    <div id='dashboard'>
-      <div id='cityChart' class='pieChart'>
-
-      </div>
-      <div id='typeChart'class='pieChart'>
+    <div id='map' class='row col-xs-12'></div>
+    <div id='dashboardTop' class='col-xs-12 row'>
+      <div id='dateChart' class='col-xs-12'>
 
       </div>
-      <div id='DoWChart'class='pieChart'>
+
+    </div>
+    <div id='dashboardBottom' class='col-xs-12'>
+      <div id='cityChart' class='pieChart col-xs-12 col-sm-6 col-md-4'>
+
+      </div>
+      <div id='typeChart'class='pieChart col-xs-12 col-sm-6 col-md-4'>
+
+      </div>
+      <div id='DoWChart'class='pieChart col-xs-12 col-sm-6 col-md-4' >
 
       </div>
 

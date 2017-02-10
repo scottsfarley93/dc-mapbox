@@ -11,7 +11,7 @@ var mapOptions = {
 }
 
 var days = ['Sunday', "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
-var months = ['January', "February", "March", "April", "May", "June", "July", "August", "September", "November", "December"]
+var boroughs = ["Bronx", "Manhattan", "Queens", "Staten Island", "Brooklyn"]
 
 myToken = "pk.eyJ1Ijoic2ZhcmxleTIiLCJhIjoiY2lmeWVydWtkNTJpb3RmbTFkdjQ4anhrMSJ9.jRJCOGU1AOHfNXHH7cwU7Q"
 
@@ -45,6 +45,10 @@ $.getJSON("data/311.json", function(response){
     o.category = c[0]
     o.subcategory =  c[1]
 
+    if (boroughs.indexOf(o.Borough.toProperCase()) == -1){
+      o.Borough = "Other"
+    }
+
 
 
     //parse the dates
@@ -53,14 +57,14 @@ $.getJSON("data/311.json", function(response){
     o.roundDate = roundDate(o.created_at) //compare days directly, instead of times
 
 
+
+
     //make sure spatial and temporal attributes are present
     if ((o.Latitude != 0) && (o.Longitude != 0) && ((o.created_at.getFullYear()  > 2012))){
       //make sure it has location info
       processedData.push(o)
     }
   })
-
-  console.log(processedData)
 
   //set up the crossfilter
   facts = crossfilter(processedData)
@@ -110,6 +114,11 @@ $.getJSON("data/311.json", function(response){
     .dimension(cityDimension)
     .group(cityGroup)
     .colors(cityColorScale)
+    .innerRadius(30)
+    .externalLabels(10)
+    .drawPaths(true)
+    .externalRadiusPadding(25)
+
 
 
   var categoryChart = dc.pieChart("#typeChart")
@@ -117,6 +126,11 @@ $.getJSON("data/311.json", function(response){
     .width($("#typeChart").width())
     .dimension(categoryDimension)
     .group(categoryGroup)
+    .innerRadius(30)
+    .externalLabels(25)
+    .drawPaths(true)
+    .externalRadiusPadding(25)
+
 
 
   var DoWChart = dc.pieChart("#DoWChart")
@@ -124,6 +138,22 @@ $.getJSON("data/311.json", function(response){
     .width($("#DoWChart").width())
     .dimension(DoWDimension)
     .group(DoWGroup)
+    .innerRadius(30)
+    .externalLabels(25)
+    .drawPaths(true)
+    .externalRadiusPadding(25)
+
+
+
+  var dateChart = dc.lineChart("#dateChart")
+    .dimension(dateDimension)
+    .group(dateGroup)
+    .x(d3.time.scale().domain(d3.extent(processedData, function(d){return d.roundDate})))
+    .height($("#dateChart").height()*0.9)
+    .width($("#dateChart").width()* 0.99)
+    .colors("red")
+    .interpolate('basis')
+    .margins({top: 5, left: 25, right: 10, bottom: 25})
 
 
 
@@ -145,4 +175,16 @@ function roundDate(d){
   d.setSeconds(0);
   d.setMilliseconds(0);
   return d
+}
+
+Array.prototype.unique = function(){
+   var u = {}, a = [];
+   for(var i = 0, l = this.length; i < l; ++i){
+      if(u.hasOwnProperty(this[i])) {
+         continue;
+      }
+      a.push(this[i]);
+      u[this[i]] = 1;
+   }
+   return a;
 }
