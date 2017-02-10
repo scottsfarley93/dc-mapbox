@@ -4,6 +4,11 @@ This is mapbox-dc.js
 Proivdes support for using mapbox-gl vector tile maps with the dc.js library.
 
 
+TODO:
+ - Mapbox styling functions
+ - Popups
+
+
 */
 
 (function() { function _dc_mapbox(dc) {
@@ -108,11 +113,13 @@ Proivdes support for using mapbox-gl vector tile maps with the dc.js library.
 
 
         //combine properties from default properties
-        _options = Object.assign({}, options, this.defaultOptions)
+        _options = Object.assign({}, this.defaultOptions, options)
+
 
         var _renderPopup = _options.renderPopup;
         var _brushOn = _options.brushOn;
         var _center = _options.center;
+        console.log(_center)
         var _zoom = _options.zoom;
 
 
