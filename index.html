@@ -34,14 +34,16 @@
     <script src="crossfilter.min.js"></script>
     <script src="dc.js">≥</script>
     <script src="leaflet-dc-events.js"></script>
-    <script src="mapbox_dc_events.js"></script>
+    <script src="mapbox_dc.js"></script>
 
     <script>
     var mapOptions = {
       container: "map",
       style: 'mapbox://styles/mapbox/streets-v9',
-      center:  [-73.9754104614258, 40.69339446439378],
-      zoom: 8
+      pointColor: 'red',
+      pointRadius: 4,
+      pointType: "circle",
+      pointIcon: undefined
     }
 
     myToken = "pk.eyJ1Ijoic2ZhcmxleTIiLCJhIjoiY2lmeWVydWtkNTJpb3RmbTFkdjQ4anhrMSJ9.jRJCOGU1AOHfNXHH7cwU7Q"
@@ -69,128 +71,27 @@
       latsDimension = locations.dimension(function(d){return d.lat})
       latsGroup = latsDimension.group().reduceCount()
       //
-      var mapz = dc_mapbox.markerChart("#map", undefined, myToken, mapOptions)
+      var mapz = dc_mapbox.pointSymbolMap("#map", myToken, mapOptions)
         .dimension(locationsDimension)
         .group(locationsGrouping)
-        .brushOn(true)
-      //   // .render()
+        // .brushOn(true)
+        // .zoom(6)
+        // .center([-90, 45])
 
-    // dc_leaflet.markerChart("#map")
-    //   .dimension(locationsDimension)
-    //   .group(locationsGrouping)
+      // mapz.map().addControl(new mapboxgl.NavigationControl())
 
 
-      var bottom = dc.barChart("#bottomChart", undefined)
+      var bottom = dc.barChart("#bottomChart")
         .height($("body").height() * 0.20)
         .width($("body").width())
         .x(d3.scale.linear().domain(d3.extent(locs, function(d){return d.lat})))
         .dimension(latsDimension)
         .group(latsGroup)
         .elasticY(true)
-        .yAxisPadding(10)
-        .xAxisPadding(10)
-        .label(function (p) {
-            return p.key;
-            })
-        .renderTitle(true)
-        .renderLabel(false)
-        .xAxisLabel("Latitude")
-        .yAxisLabel("Altitude")
 
 
       dc.renderAll()
 
-
-      //   .width($("#map").width())
-      //   .height($("#map").height())
-      //   .dimension(globals.filters.emptyDimension)
-      //   .group(globals.filters.emptyGroup)
-      //   .center([30,-90])
-      //   .zoom(3)
-
-
-
-
-
-    // var mapOptions = {
-    //   container: "map",
-    //   style: 'mapbox://styles/mapbox/streets-v9',
-    //   center:  [-73.9754104614258, 40.69339446439378],
-    //   zoom: 8
-    // }
-    //
-    //
-    //     mapboxgl.accessToken = 'pk.eyJ1Ijoic2ZhcmxleTIiLCJhIjoiY2lmeWVydWtkNTJpb3RmbTFkdjQ4anhrMSJ9.jRJCOGU1AOHfNXHH7cwU7Q';
-    //     var map = new mapboxgl.Map(mapOptions);
-    //
-    //     //add controls
-    //     map.addControl(new mapboxgl.AttributionControl({
-    //         compact: true
-    //     }))
-    //
-    //     map.addControl(new mapboxgl.ScaleControl({}))
-    //
-    //     var markers = []
-    //
-    //     $.getJSON("http://api.neotomadb.org/v1/data/sites", function(response){
-    //       allLayers = []
-    //       data = response['data']
-    //       data.forEach(function(d){
-    //         d.lat = (+d.LatitudeNorth +  +d.LatitudeSouth) / 2
-    //         d.lng = +(+d.LongitudeWest + +d.LongitudeWest) / 2
-    //
-    //
-    //         m = JSON.parse('{"type": "Feature", "geometry": {"type": "Point", "coordinates": ['+d.lng +','+ d.lat+']}, "properties" : ' + JSON.stringify(d) + ' }')
-    //         markers.push(m)
-    //       }) // end forEach
-    //       map.on('load', function() {
-    //           map.addSource("points", {
-    //               "type": "geojson",
-    //               "data": {
-    //                   "type": "FeatureCollection",
-    //                   "features": markers
-    //               }
-    //           });
-    //           map.addLayer({
-    //               "id": "points",
-    //               "type": "circle",
-    //               "source": "points",
-    //               "paint": {
-    //                   "circle-radius": 8,
-    //                   "circle-color": "#000"
-    //               }
-    //           });
-    //       }); // end on load
-    //
-    //       clicked= false
-    //
-    //       map.on('click', function (e) {
-    //       //     var features = map.queryRenderedFeatures(e.point, { layers: ['points'] });
-    //       //
-    //       //     if (!features.length) {
-    //       //         return;
-    //       //     }
-    //       //
-    //       //     var feature = features[0];
-    //       //
-    //       //     // Populate the popup and set its coordinates
-    //       //     // based on the feature found.
-    //       //     var popup = new mapboxgl.Popup()
-    //       //         .setLngLat(feature.geometry.coordinates)
-    //       //         .setHTML(feature.properties.SiteName)
-    //       //         .addTo(map);
-    //         // Set the filter to populate features into the layer.
-    //         if (!clicked){
-    //               map.setFilter('points', ['all', ['>', 'Altitude', 1000], ['<', 'Altitude', 2500]]);
-    //               clicked = true
-    //         }else{
-    //           map.setFilter('points', null)
-    //           clicked = false
-    //         }
-    //
-    //       });
-    //
-    //     }) // end ajax
 
     </script>
 </body>
