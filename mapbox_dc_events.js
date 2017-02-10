@@ -179,12 +179,16 @@
         _chart._postRender = function() {
           console.log("Post Render")
 
-            _chart.filterHandler(testFilterHandler);
+          //register the filter handler
+            _chart.filterHandler(doFilterByArea);
+
+          //register filter event listeners
+          _chart.map().on('moveend', zoomFilter);
 
           _addMarkers()
         };
 
-        var testFilterHandler = function(filter, filters){
+        var doFilterByArea = function(filter, filters){
           _chart.dimension().filter(null);
           //signal to other charts that they need to be updated
           //communicate via crossfilter
@@ -200,6 +204,7 @@
         var filterToArray = function(filter){
           var ne = filter.getNorthEast()
           var sw = filter.getSouthWest()
+          _chart.map().setFilter('points', null)
           _chart.map().setFilter("points", ['all', [">", "lat", sw.lat], ['<', 'lat', ne.lat], ['>', 'lng', sw.lng], ['<', 'lng', ne.lng]])
         }
 
@@ -210,6 +215,21 @@
                 return _chart.valueAccessor()(d) !== 0;
             });
         };
+
+        var zoomFilter = function(){
+          filter = _chart.map().getBounds();
+          console.log(filter)
+          dc.events.trigger(function () {
+            //redraw all dashboard charts
+              _chart.filter(null);
+              if (filter) {
+                  _innerFilter=true;
+                  _chart.filter(filter);
+                  _innerFilter=false;
+              }
+              dc.redrawAll(_chart.chartGroup()); //do redraw
+          });
+        }
 
         //accessor functions
         _chart.locationAccessor = function(_) {
@@ -236,50 +256,6 @@
         }
 
 
-        var zoomFilter = function(e) {
-          //geoBounds filter function
-            if (e.type === "moveend" && (_zooming || e.hard)) {
-                return;
-            }
-            _zooming=false;
-
-            if (_filterByArea) {
-                var filter;
-                if (_chart.map().getCenter().equals(_chart.center()) && _chart.map().getZoom() === _chart.zoom()) {
-                  //there was no change, so don't filter
-                    filter = null;
-                }else {
-                  //a change occurred, filter
-                    filter = _chart.map().getBounds();
-                }
-                dc.events.trigger(function () {
-                  //redraw all dashboard charts
-                    _chart.filter(null);
-                    if (filter) {
-                        _innerFilter=true;
-                        _chart.filter(filter);
-                        _innerFilter=false;
-                    }
-                    dc.redrawAll(_chart.chartGroup()); //do redraw
-                });
-            }
-        };
-        //
-        var doFilterByArea = function(dimension, filters) {
-            _chart.dimension().filter(null);
-            if (filters && filters.length>0) {
-                _chart.dimension().filterFunction(function(d) {
-                    if (!(d in _markerList)) {
-                        return false;
-                    }
-                    var locO = _markerList[d].getLatLng();
-                    return locO && filters[0].contains(locO);
-                });
-                if (!_innerFilter && _chart.map().getBounds().toString !== filters[0].toString()) {
-                    _chart.map().fitBounds(filters[0]);
-                }
-            }
-        };
         //
         var selectFilter = function(e) {
             if (!e.target) return;
