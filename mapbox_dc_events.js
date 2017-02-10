@@ -118,6 +118,7 @@
           data.forEach(function(d){
             d.lat = d.key.lat
             d.lng = d.key.lng
+            d._id = _id
             m = JSON.parse('{"type": "Feature", "geometry": {"type": "Point", "coordinates": ['+ d.lng +','+ d.lat+']}, "properties" : ' + JSON.stringify(d) + ' }')
             features.push(m)
             _id += 1
@@ -211,7 +212,6 @@
         }
 
         _chart._doRedraw = function() {
-
           console.log("redrawing")
             var groups = _chart._computeOrderedGroups(_chart.data())
 
@@ -219,15 +219,8 @@
               return _chart.valueAccessor()(d) !== 0;
           });
 
-          _filteredLats = []
-          _filteredLngs = []
-          groupsFiltered.forEach(function(d){
-            _filteredLngs.push(d.lng)
-            _filteredLats.push(d.lat)
-          })
-
-
-          _chart.map().setFilter("points", ["all", ["in", "lat"].concat(_filteredLats), ["in", "lng"].concat(_filteredLngs)])
+          _idList = groupsFiltered.map(function(feature){return feature._id})
+          _chart.map().setFilter("points", ["in", "_id"].concat(_idList))
         };
 
         var zoomFilter = function(){
