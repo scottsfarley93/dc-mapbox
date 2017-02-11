@@ -26,7 +26,10 @@ TODO:
           style:'mapbox://styles/mapbox/streets-v9',
           container: "map",
           renderPopup: true,
-          brushOn: true
+          brushOn: true,
+          popupTextFunction: function(d){
+            return d.properties.key
+          }
         }
     };
 
@@ -115,14 +118,16 @@ TODO:
         //combine properties from default properties
         _options = Object.assign({}, this.defaultOptions, options)
 
-
+        //parse throught the options and set variables
         var _renderPopup = _options.renderPopup;
         var _brushOn = _options.brushOn;
         var _center = _options.center;
+        var _zoom = _options.zoom;
+        var _popupData = undefined;
+
+        //set the container in the options to be the same as what's in the parent so the user doesn't need to sepcify twice
         var _container = parent.replace("#", "")
         _options.container = _container
-        var _zoom = _options.zoom;
-
 
         //create a new chart base
         var _chart = dc_mapbox.mapboxBase(mapboxToken, _options);
@@ -154,13 +159,14 @@ TODO:
           //recompute the filter on the map's dimension
 
           //get a list of the groups currently within the filter on the dimension
-          var groups = _chart._computeOrderedGroups(_chart.data())
+          var groups = _chart._computeOrderedGroups(_chart.dimension().top(Infinity))
           var groupsFiltered = groups.filter(function (d) {
               return _chart.valueAccessor()(d) !== 0;
           });
 
           //get the internal ids of each group within the current filter
-          _idList = groupsFiltered.map(function(k){return k._id})
+          _idList = groupsFiltered.map(function(k){
+            return k._id})
 
           //update the filter on the map layer
           _chart.map().setFilter("points", ["in", "_id"].concat(_idList))
@@ -256,6 +262,22 @@ TODO:
           return _chart;
         }
 
+        _chart.renderPopup = function(_){
+          if (!arguments.length){
+            return _renderPopup;
+          }
+          _renderPopup = _;
+          return _chart
+        }
+        _chart.popupTextFunction = function(_){
+          if (!arguments.length){
+            return _chart.options.popupTextFunction;
+          }
+          _chart.options.popupTextFunction = _
+          return _chart;
+        }
+
+
 
 
       //utility functions
@@ -264,7 +286,7 @@ TODO:
           //add the data to the map canvas
 
           //first convert to geojson, because mapbox can't consume straight json
-          geojsonMarkers = _toGeoJson(_chart.data())
+          geojsonMarkers = _toGeoJson(_chart.dimension().top(Infinity))
 
 
           //this happens async
@@ -294,11 +316,13 @@ TODO:
                             "circle-radius": _chart.options.pointRadius,
                             "circle-color": _chart.options.pointColor,
                         }
-                    });
+                    }, 'road');
 
                     if (_chart.options.renderPopup){
                         _chart.map().on('click', function (e) {
                           console.log("Map was clicked")
+
+                          //first get the feature that was clicked
                           var features = _chart.map().queryRenderedFeatures(e.point, { layers: ['points'] });
 
                           if (!features.length) {
@@ -307,11 +331,16 @@ TODO:
 
                           var feature = features[0];
 
+                          console.log(feature)
+
+                          var popupText = _chart.options.popupTextFunction(feature)
+
+
                           // Populate the popup and set its coordinates
                           // based on the feature found.
                           var popup = new mapboxgl.Popup()
                               .setLngLat(feature.geometry.coordinates)
-                              .setHTML("There's a feature here")
+                              .setHTML(popupText)
                               .addTo(_chart.map());
                       });
                     } //end if
@@ -324,8 +353,8 @@ TODO:
           features = [] //array of geojson features
           _id = 0 //hold an internal id for filtering later on
           data.forEach(function(d){
-            d.lat = d.key.lat
-            d.lng = d.key.lng
+            d.lat = d.Latitude
+            d.lng = d.Longitude
             d._id = _id
             m = JSON.parse('{"type": "Feature", "geometry": {"type": "Point", "coordinates": ['+ d.lng +','+ d.lat+']}, "properties" : ' + JSON.stringify(d) + ' }')
             features.push(m)

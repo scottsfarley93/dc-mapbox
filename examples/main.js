@@ -27,6 +27,7 @@ $.getJSON("data/311.json", function(response){
   var colnames = response['meta']['view']['columns']
 
   processedData = []
+
   //convert arrays to objects so we can reference by name
   data.forEach(function(d){
     o = {}
@@ -55,9 +56,7 @@ $.getJSON("data/311.json", function(response){
     //parse the dates
     ts = Date.parse(o['Creation Date'])
     o.created_at = new Date(ts)
-    o.roundDate = roundDate(o.created_at) //compare days directly, instead of times
-
-
+    o.roundDate = roundDate(new Date(ts)) //compare days directly, instead of times
 
 
     //make sure spatial and temporal attributes are present
@@ -98,9 +97,12 @@ $.getJSON("data/311.json", function(response){
   DoWGroup = DoWDimension.group().reduceCount()
 
   //make a new map and add the points
-  var mapChart = dc_mapbox.pointSymbolMap("#map", myToken, mapOptions)
+  mapChart = dc_mapbox.pointSymbolMap("#map", myToken, mapOptions)
     .dimension(geoDimension)
     .group(geoGroup)
+    .popupTextFunction(function(d){
+      return d.properties.Location;
+    })
 
 
 
