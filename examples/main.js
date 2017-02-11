@@ -101,7 +101,7 @@ $.getJSON("data/311.json", function(response){
     .dimension(geoDimension)
     .group(geoGroup)
     .popupTextFunction(function(d){
-      return d.properties.Location;
+      return "<h5>" + d.properties.Location + "</h5><p>" + d.properties['Incident Type'] + "</p><p>" + d.properties.created_at + "</p>";
     })
 
 
