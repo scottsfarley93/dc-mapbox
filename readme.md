@@ -70,3 +70,8 @@ var mapChart = dc_mapbox.pointSymbolMap("#map", myToken, mapOptions)
 ```
 
 An annotated source for the library can be found [here](mapbox_dc.js) and an commented example can be found in the examples folder of this repository, with [html](examples/index.html) and [javascript](examples/main.js).
+
+### To Do List:
+- Mapbox data styling functions
+- Popups on click
+
