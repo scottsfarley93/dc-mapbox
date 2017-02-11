@@ -7,7 +7,8 @@ var mapOptions = {
   pointType: "circle",
   pointIcon: undefined,
   center: new mapboxgl.LngLat(-74.0059, 40.7127),
-  zoom: 9
+  zoom: 9,
+  renderPopup: true
 }
 
 var days = ['Sunday', "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
@@ -155,11 +156,7 @@ $.getJSON("data/311.json", function(response){
     .interpolate('basis')
     .margins({top: 5, left: 25, right: 10, bottom: 25})
 
-
-
   dc.renderAll();
-
-
 }) //end ajax
 
 

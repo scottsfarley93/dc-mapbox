@@ -25,7 +25,7 @@ TODO:
           pointIcon: undefined,
           style:'mapbox://styles/mapbox/streets-v9',
           container: "map",
-          renderPopup: false,
+          renderPopup: true,
           brushOn: true
         }
     };
@@ -119,7 +119,8 @@ TODO:
         var _renderPopup = _options.renderPopup;
         var _brushOn = _options.brushOn;
         var _center = _options.center;
-        console.log(_center)
+        var _container = parent.replace("#", "")
+        _options.container = _container
         var _zoom = _options.zoom;
 
 
@@ -295,10 +296,25 @@ TODO:
                         }
                     });
 
-                    //TODO: this isn't the best place for this
-                    //makes the load seem jumpy
-                    //but, since load comes async, it's difficult to do earlier ?
-                    _chart.map().easeTo({center:_center, zoom: _zoom})
+                    if (_chart.options.renderPopup){
+                        _chart.map().on('click', function (e) {
+                          console.log("Map was clicked")
+                          var features = _chart.map().queryRenderedFeatures(e.point, { layers: ['points'] });
+
+                          if (!features.length) {
+                              return;
+                          }
+
+                          var feature = features[0];
+
+                          // Populate the popup and set its coordinates
+                          // based on the feature found.
+                          var popup = new mapboxgl.Popup()
+                              .setLngLat(feature.geometry.coordinates)
+                              .setHTML("There's a feature here")
+                              .addTo(_chart.map());
+                      });
+                    } //end if
                 }); // end on load
         }
 
