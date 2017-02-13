@@ -66,6 +66,10 @@ $.getJSON("data/311.json", function(response){
     }
   })
 
+  empty = crossfilter()
+  emptyD = empty.dimension(function(d){return d})
+  emptyG = emptyD.group().reduceCount()
+
   //set up the crossfilter
   facts = crossfilter(processedData)
 
@@ -98,8 +102,8 @@ $.getJSON("data/311.json", function(response){
 
   //make a new map and add the points
   mapChart = dc_mapbox.pointSymbolMap("#map", myToken, mapOptions)
-    .dimension(geoDimension)
-    .group(geoGroup)
+    .dimension(emptyD)
+    .group(emptyG)
     .popupTextFunction(function(d){
       return "<h5>" + d.properties.Location + "</h5><p>" + d.properties['Incident Type'] + "</p><p>" + d.properties.created_at + "</p>";
     })
@@ -159,6 +163,17 @@ $.getJSON("data/311.json", function(response){
     .margins({top: 5, left: 25, right: 10, bottom: 25})
 
   dc.renderAll();
+
+  $("#change").click(function(){
+
+    console.log(geoDimension.top(10))
+    console.log(geoGroup.top(10))
+
+    mapChart.dimension(geoDimension)
+      .group(geoGroup)
+
+    dc.renderAll();
+  })
 }) //end ajax
 
 

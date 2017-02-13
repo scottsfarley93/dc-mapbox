@@ -29,7 +29,39 @@ TODO:
           brushOn: true,
           popupTextFunction: function(d){
             return d.properties.key
+          },
+          //necessary because we're using dimension instead of group -- bad
+          latitudeField: "Latitude",
+          longitudeField: "Longitude"
+        },
+        _toGeoJsonArray : function(data, latitudeField, longitudeField){
+          //convert the chart data (DC/crossfilter dimension) into geojson for the map
+          if (latitudeField == undefined){
+            latitudeField = this.defaultOptions.latitudeField
           }
+          if (longitudeField == undefined){
+            longitudeField = this.defaultOptions.longitudeField
+          }
+          features = [] //array of geojson features
+          _id = 0 //hold an internal id for filtering later on
+          data.forEach(function(d){
+            d.lat = d[latitudeField]
+            d.lng = d[longitudeField]
+            d._id = _id
+            m = JSON.parse('{"type": "Feature", "geometry": {"type": "Point", "coordinates": ['+ d.lng +','+ d.lat+']}, "properties" : ' + JSON.stringify(d) + ' }')
+            features.push(m)
+            _id += 1
+          }) // end forEach
+
+          return features
+        },
+        _contains : function(bounds, point){
+          //utility function
+          //returns true if point is geographically within bounds
+            var sw = bounds.getSouthWest(),
+                ne = bounds.getNorthEast()
+            return (point.lat >= sw.lat) && (point.lat <= ne.lat) &&
+                   (point.lng >= sw.lng) && (point.lng <= ne.lng);
         }
     };
 
@@ -49,9 +81,26 @@ TODO:
 
         _createMap = function() {
           //create the mapbox gl map
+          console.log("Creating map.")
             mapboxgl.accessToken = mapboxToken;
             var map = new mapboxgl.Map(_mapOptions);
-
+            map.on('load', function(d){
+              map.addSource('points', {"type": "geojson", "data": {
+                                "type": "FeatureCollection",
+                                "features": []
+                            }})
+              map.addLayer({
+                //TODO: allow symbols
+                  "id": "points",
+                  "type": mapOptions.pointType,
+                  "source": "points",
+                  "icon": mapOptions.pointIcon,
+                  "paint": {
+                      "circle-radius": mapOptions.pointRadius,
+                      "circle-color": mapOptions.pointColor,
+                  }
+              }, 'road');
+            })//end on load
             return map;
         };
 
@@ -62,10 +111,33 @@ TODO:
                 return _createMap;
             }
             _createMap = _;
+            _createMap();
+            _doRender();
             return _chart;
         };
 
+        _chart._setData = function(dataArray){
+          //first convert to geojson, because mapbox can't consume straight json
+          console.log("BASE MAP SET DATA")
+          geojsonMarkers = dc_mapbox._toGeoJsonArray(_chart.dimension().top(Infinity))
+          if (_chart.map().loaded()){
+            _chart._setMarkers(geojsonMarkers)
+          }else{
+            _chart.map().on('load', function(d){
+              _chart._setMarkers(geojsonMarkers)
+            })
+          }
+        }
+
+        _chart._setMarkers = function(geojsonFeatureArray){
+          _chart.map().getSource('points').setData({
+                  "type": "FeatureCollection",
+                  "features": geojsonFeatureArray
+              });
+        }
+
         _chart._doRender = function() {
+          console.log("Doing base map render")
           //render the map
             if(! _chart.map()){
                 _map = _createMap(_chart.root());
@@ -77,17 +149,23 @@ TODO:
                 }
                 _chart._postRender(); //called after render is complete
             }
-            else
-                //pass
+            else{
+              _chart._setData();
+            }
 
             return _chart._doRedraw();
         };
 
+
+
         _chart._doRedraw = function() {
+          console.log("Doing base map redraw")
             return _chart;
         };
 
         _chart._postRender = function() {
+          console.log("Base map post render")
+          _chart.setData()
             return _chart;
         };
         _chart.map = function() {
@@ -130,7 +208,12 @@ TODO:
         _options.container = _container
 
         //create a new chart base
-        var _chart = dc_mapbox.mapboxBase(mapboxToken, _options);
+        // var _chart = dc_mapbox.mapboxBase(mapboxToken, _options);
+
+        var _chart = function(){
+          var map = dc_mapbox.mapboxBase(mapboxToken, _options);
+          return map
+        }()
 
 
         _chart.options = _options
@@ -140,16 +223,19 @@ TODO:
         //Rendering and Drawing functions
         _chart._postRender = function() {
           //occurs after the base map has been rendered
+          console.log("post render")
 
-          //register the filter handler
-            _chart.filterHandler(areaFilter);
-
-          //register filter event listeners
+          //set the data source to the dimension of the map
+          _setDataSource()
+          //
+          // //register the filter handler
+          _chart.filterHandler(areaFilter);
+          //
+          // //register filter event listeners
           _chart.map().on('moveend', boundsChangeFilter);
           _chart.map().on('zoomend', boundsChangeFilter);
+          //
 
-          //add data source and layer
-          _addMarkers()
         };
 
 
@@ -158,18 +244,22 @@ TODO:
           //and on map bounds change
           //recompute the filter on the map's dimension
 
+          console.log("redraw")
+
           //get a list of the groups currently within the filter on the dimension
           var groups = _chart._computeOrderedGroups(_chart.dimension().top(Infinity))
           var groupsFiltered = groups.filter(function (d) {
               return _chart.valueAccessor()(d) !== 0;
           });
-
+          //
           //get the internal ids of each group within the current filter
           _idList = groupsFiltered.map(function(k){
             return k._id})
 
-          //update the filter on the map layer
-          _chart.map().setFilter("points", ["in", "_id"].concat(_idList))
+          console.log(_idList)
+          //
+          // //update the filter on the map layer
+          // _chart.map().setFilter("points", ["in", "_id"].concat(_idList))
         };
 
 
@@ -221,7 +311,7 @@ TODO:
           if (_brushOn){
             if (filters && filters.length>0) {
                 _chart.dimension().filterFunction(function(d) {
-                  var doesContain = contains(filters[0], d) //check if the filter bounds include each point
+                  var doesContain = dc_mapbox._contains(filters[0], d) //check if the filter bounds include each point
                   return doesContain
                 });
                 filterToBounds(filters[0])
@@ -282,96 +372,50 @@ TODO:
 
       //utility functions
 
-        var _addMarkers = function(){
+        var _setDataSource = function(){
           //add the data to the map canvas
 
-          //first convert to geojson, because mapbox can't consume straight json
-          geojsonMarkers = _toGeoJson(_chart.dimension().top(Infinity))
+      }
 
-
+        var _addMarkers = function(geojsonFeatureArray){
           //this happens async
-          _chart.map().on('load', function() {
-              //add the data source the the mpa
-                    _chart.map().addSource("points", {
-                        "type": "geojson",
-                        "data": {
-                            "type": "FeatureCollection",
-                            "features": geojsonMarkers
-                        }
-                    });
-                    _chart.map().addLayer({
-                      //style the newly added source
+              //add the data source the the map
 
-                      //TODO: allow symbols
-                        "id": "points",
-                        "type": _chart.options.pointType,
-                        "source": "points",
-                        "icon": _chart.options.pointIcon,
-                        // "layout": {
-                        //       "icon-image": "airport-15",
-                        //       "icon-padding": 0,
-                        //       "icon-allow-overlap":true
-                        //   },
-                        "paint": {
-                            "circle-radius": _chart.options.pointRadius,
-                            "circle-color": _chart.options.pointColor,
-                        }
-                    }, 'road');
+          console.log(geojsonFeatureArray)
+          _chart.map().getSource('points').setData({
+                  "type": "FeatureCollection",
+                  "features": geojsonFeatureArray
+              });
 
-                    if (_chart.options.renderPopup){
-                        _chart.map().on('click', function (e) {
-                          console.log("Map was clicked")
-
-                          //first get the feature that was clicked
-                          var features = _chart.map().queryRenderedFeatures(e.point, { layers: ['points'] });
-
-                          if (!features.length) {
-                              return;
-                          }
-
-                          var feature = features[0];
-
-                          console.log(feature)
-
-                          var popupText = _chart.options.popupTextFunction(feature)
-
-
-                          // Populate the popup and set its coordinates
-                          // based on the feature found.
-                          var popup = new mapboxgl.Popup()
-                              .setLngLat(feature.geometry.coordinates)
-                              .setHTML(popupText)
-                              .addTo(_chart.map());
-                      });
-                    } //end if
-                }); // end on load
+                    // if (_chart.options.renderPopup){
+                    //     _chart.map().on('click', function (e) {
+                    //       console.log("Map was clicked")
+                    //
+                    //       //first get the feature that was clicked
+                    //       var features = _chart.map().queryRenderedFeatures(e.point, { layers: ['points'] });
+                    //
+                    //       if (!features.length) {
+                    //           return;
+                    //       }
+                    //
+                    //       var feature = features[0];
+                    //
+                    //       console.log(feature)
+                    //
+                    //       var popupText = _chart.options.popupTextFunction(feature)
+                    //
+                    //
+                    //       // Populate the popup and set its coordinates
+                    //       // based on the feature found.
+                    //       var popup = new mapboxgl.Popup()
+                    //           .setLngLat(feature.geometry.coordinates)
+                    //           .setHTML(popupText)
+                    //           .addTo(_chart.map());
+                    //   });
+                    // } //end if
         }
 
 
-        var _toGeoJson = function(data){
-          //convert the chart data (DC/crossfilter dimension) into geojson for the map
-          features = [] //array of geojson features
-          _id = 0 //hold an internal id for filtering later on
-          data.forEach(function(d){
-            d.lat = d.Latitude
-            d.lng = d.Longitude
-            d._id = _id
-            m = JSON.parse('{"type": "Feature", "geometry": {"type": "Point", "coordinates": ['+ d.lng +','+ d.lat+']}, "properties" : ' + JSON.stringify(d) + ' }')
-            features.push(m)
-            _id += 1
-          }) // end forEach
-
-          return features
-        }
-
-        var contains = function(bounds, point){
-          //utility function
-          //returns true if point is geographically within bounds
-        		var sw = bounds.getSouthWest(),
-        		    ne = bounds.getNorthEast()
-        		return (point.lat >= sw.lat) && (point.lat <= ne.lat) &&
-        		       (point.lng >= sw.lng) && (point.lng <= ne.lng);
-        }
 
 
         //whole function returns the dc chart
