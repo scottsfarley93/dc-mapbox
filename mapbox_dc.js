@@ -117,7 +117,7 @@ TODO:
                     var popupText = mapOptions.popupTextFunction(feature)
 
 
-                    //show the popup on the map
+                    //show the popup on the mapd
                     var popup = new mapboxgl.Popup()
                         .setLngLat(feature.geometry.coordinates)
                         .setHTML(popupText)
@@ -143,7 +143,7 @@ TODO:
 
         _chart._setData = function(dataArray){
           //first convert to geojson, because mapbox can't consume straight json
-          geojsonMarkers = dc_mapbox._toGeoJsonArray(_chart.dimension().top(Infinity))
+          geojsonMarkers = dc_mapbox._toGeoJsonArray(_chart.dimension().top(Infinity), mapOptions.latitudeField, mapOptions.longitudeField)
           if (_chart.map().loaded()){
             _chart._setMarkers(geojsonMarkers)
           }else{
