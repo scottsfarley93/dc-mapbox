@@ -81,7 +81,6 @@ TODO:
 
         _createMap = function() {
           //create the mapbox gl map
-          console.log("Creating map.")
             mapboxgl.accessToken = mapboxToken;
             var map = new mapboxgl.Map(_mapOptions);
             map.on('load', function(d){
@@ -100,6 +99,32 @@ TODO:
                       "circle-color": mapOptions.pointColor,
                   }
               }, 'road');
+              if (mapOptions.renderPopup){
+                  _chart.map().on('click', function (e) {
+                    //first get the feature that was clicked
+                    var features = _chart.map().queryRenderedFeatures(e.point, { layers: ['points'] });
+
+                    if (!features.length) {
+                        return;
+                    }
+
+                    var feature = features[0];
+
+                    //format the popup via the function set in the options
+                    //TODO: this won't change after the map has been rendered
+                    //set this is another function
+                    //so it can be called as a chained method
+                    var popupText = mapOptions.popupTextFunction(feature)
+
+
+                    //show the popup on the map
+                    var popup = new mapboxgl.Popup()
+                        .setLngLat(feature.geometry.coordinates)
+                        .setHTML(popupText)
+                        .addTo(_chart.map());
+                });
+              } //end if
+
             })//end on load
             return map;
         };
@@ -118,7 +143,6 @@ TODO:
 
         _chart._setData = function(dataArray){
           //first convert to geojson, because mapbox can't consume straight json
-          console.log("BASE MAP SET DATA")
           geojsonMarkers = dc_mapbox._toGeoJsonArray(_chart.dimension().top(Infinity))
           if (_chart.map().loaded()){
             _chart._setMarkers(geojsonMarkers)
@@ -137,7 +161,6 @@ TODO:
         }
 
         _chart._doRender = function() {
-          console.log("Doing base map render")
           //render the map
             if(! _chart.map()){
                 _map = _createMap(_chart.root());
@@ -159,13 +182,10 @@ TODO:
 
 
         _chart._doRedraw = function() {
-          console.log("Doing base map redraw")
             return _chart;
         };
 
         _chart._postRender = function() {
-          console.log("Base map post render")
-          _chart.setData()
             return _chart;
         };
         _chart.map = function() {
@@ -223,11 +243,7 @@ TODO:
         //Rendering and Drawing functions
         _chart._postRender = function() {
           //occurs after the base map has been rendered
-          console.log("post render")
 
-          //set the data source to the dimension of the map
-          _setDataSource()
-          //
           // //register the filter handler
           _chart.filterHandler(areaFilter);
           //
@@ -243,9 +259,6 @@ TODO:
           //called each time another chart in the group is updated
           //and on map bounds change
           //recompute the filter on the map's dimension
-
-          console.log("redraw")
-
           //get a list of the groups currently within the filter on the dimension
           var groups = _chart._computeOrderedGroups(_chart.dimension().top(Infinity))
           var groupsFiltered = groups.filter(function (d) {
@@ -256,10 +269,20 @@ TODO:
           _idList = groupsFiltered.map(function(k){
             return k._id})
 
-          console.log(_idList)
-          //
-          // //update the filter on the map layer
-          // _chart.map().setFilter("points", ["in", "_id"].concat(_idList))
+          // this seems hacky
+          // If we don't first check to see if the map is loaded
+          // we get an error on trying to filter before the style is done loading
+          //presumably this is onl a problem on the init
+          //not when the filter is actually being used during the session
+          if (_chart.map().loaded()){
+            // set the filter immediately
+            _chart.map().setFilter("points", ["in", "_id"].concat(_idList))
+          }else{
+            _chart.map().on('load', function(){
+              // set the filter as soon as the map has loaded
+              _chart.map().setFilter("points", ["in", "_id"].concat(_idList))
+            })
+          }
         };
 
 
@@ -366,56 +389,6 @@ TODO:
           _chart.options.popupTextFunction = _
           return _chart;
         }
-
-
-
-
-      //utility functions
-
-        var _setDataSource = function(){
-          //add the data to the map canvas
-
-      }
-
-        var _addMarkers = function(geojsonFeatureArray){
-          //this happens async
-              //add the data source the the map
-
-          console.log(geojsonFeatureArray)
-          _chart.map().getSource('points').setData({
-                  "type": "FeatureCollection",
-                  "features": geojsonFeatureArray
-              });
-
-                    // if (_chart.options.renderPopup){
-                    //     _chart.map().on('click', function (e) {
-                    //       console.log("Map was clicked")
-                    //
-                    //       //first get the feature that was clicked
-                    //       var features = _chart.map().queryRenderedFeatures(e.point, { layers: ['points'] });
-                    //
-                    //       if (!features.length) {
-                    //           return;
-                    //       }
-                    //
-                    //       var feature = features[0];
-                    //
-                    //       console.log(feature)
-                    //
-                    //       var popupText = _chart.options.popupTextFunction(feature)
-                    //
-                    //
-                    //       // Populate the popup and set its coordinates
-                    //       // based on the feature found.
-                    //       var popup = new mapboxgl.Popup()
-                    //           .setLngLat(feature.geometry.coordinates)
-                    //           .setHTML(popupText)
-                    //           .addTo(_chart.map());
-                    //   });
-                    // } //end if
-        }
-
-
 
 
         //whole function returns the dc chart
