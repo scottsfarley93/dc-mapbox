@@ -73,5 +73,4 @@ An annotated source for the library can be found [here](mapbox_dc.js) and an com
 
 ### To Do List:
 - Mapbox data styling functions
-- Popups on click
 
