@@ -143,7 +143,9 @@ TODO:
 
         _chart._setData = function(dataArray){
           //first convert to geojson, because mapbox can't consume straight json
-          geojsonMarkers = dc_mapbox._toGeoJsonArray(_chart.dimension().top(Infinity), mapOptions.latitudeField, mapOptions.longitudeField)
+          dat = _chart.dimension().top(Infinity)
+          console.log(dat)
+          geojsonMarkers = dc_mapbox._toGeoJsonArray(dat, mapOptions.latitudeField, mapOptions.longitudeField)
           if (_chart.map().loaded()){
             _chart._setMarkers(geojsonMarkers)
           }else{
@@ -170,6 +172,7 @@ TODO:
                 if (_defaultCenter && _defaultZoom) {
                     _map.setCenter(_mapOptions.center).setZoom(_mapOptions.zoom)
                 }
+                _chart._setData(); //set the geojson source
                 _chart._postRender(); //called after render is complete
             }
             else{
