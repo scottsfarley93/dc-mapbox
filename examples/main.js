@@ -102,8 +102,8 @@ $.getJSON("data/311.json", function(response){
 
   //make a new map and add the points
   mapChart = dc_mapbox.pointSymbolMap("#map", myToken, mapOptions)
-    .dimension(emptyD)
-    .group(emptyG)
+    .dimension(geoDimension)
+    .group(geoGroup)
     .popupTextFunction(function(d){
       return "<h5>" + d.properties.Location + "</h5><p>" + d.properties['Incident Type'] + "</p><p>" + d.properties.created_at + "</p>";
     })
