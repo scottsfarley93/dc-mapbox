@@ -7,14 +7,17 @@ var mapOptions = {
   pointType: "circle",
   pointIcon: undefined,
   center: new mapboxgl.LngLat(-74.0059, 40.7127),
-  zoom: 9,
-  renderPopup: true
+  zoom: 13,
+  renderPopup: true,
+  latitudeField: "Latitude",
+  longitudeField: "Longitude"
 }
 
 var days = ['Sunday', "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
 var boroughs = ["Bronx", "Manhattan", "Queens", "Staten Island", "Brooklyn"]
 
 myToken = "pk.eyJ1Ijoic2ZhcmxleTIiLCJhIjoiY2lmeWVydWtkNTJpb3RmbTFkdjQ4anhrMSJ9.jRJCOGU1AOHfNXHH7cwU7Q"
+
 
 
 
@@ -66,10 +69,6 @@ $.getJSON("data/311.json", function(response){
     }
   })
 
-  empty = crossfilter()
-  emptyD = empty.dimension(function(d){return d})
-  emptyG = emptyD.group().reduceCount()
-
   //set up the crossfilter
   facts = crossfilter(processedData)
 
@@ -100,13 +99,14 @@ $.getJSON("data/311.json", function(response){
   })
   DoWGroup = DoWDimension.group().reduceCount()
 
-  //make a new map and add the points
+  //add the points
   mapChart = dc_mapbox.pointSymbolMap("#map", myToken, mapOptions)
-    .dimension(emptyD)
-    .group(emptyG)
     .popupTextFunction(function(d){
       return "<h5>" + d.properties.Location + "</h5><p>" + d.properties['Incident Type'] + "</p><p>" + d.properties.created_at + "</p>";
     })
+    .dimension(geoDimension)
+    .group(geoGroup)
+
 
 
 
@@ -164,16 +164,6 @@ $.getJSON("data/311.json", function(response){
 
   dc.renderAll();
 
-  $("#change").click(function(){
-
-    console.log(geoDimension.top(10))
-    console.log(geoGroup.top(10))
-
-    mapChart.dimension(geoDimension)
-      .group(geoGroup)
-
-    dc.renderAll();
-  })
 }) //end ajax
 
 

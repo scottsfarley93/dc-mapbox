@@ -66,7 +66,6 @@ TODO:
     };
 
     dc_mapbox.mapboxBase = function(mapboxToken, mapOptions) {
-        console.log(mapboxToken)
         _chart = dc.marginMixin(dc.baseChart({})); //_chart inherits from dc
 
         _chart.margins({left:0, top:0, right:0, bottom:0});
@@ -143,7 +142,8 @@ TODO:
 
         _chart._setData = function(dataArray){
           //first convert to geojson, because mapbox can't consume straight json
-          geojsonMarkers = dc_mapbox._toGeoJsonArray(_chart.dimension().top(Infinity), mapOptions.latitudeField, mapOptions.longitudeField)
+          dat = _chart.dimension().top(Infinity)
+          geojsonMarkers = dc_mapbox._toGeoJsonArray(dat, mapOptions.latitudeField, mapOptions.longitudeField)
           if (_chart.map().loaded()){
             _chart._setMarkers(geojsonMarkers)
           }else{
@@ -170,6 +170,7 @@ TODO:
                 if (_defaultCenter && _defaultZoom) {
                     _map.setCenter(_mapOptions.center).setZoom(_mapOptions.zoom)
                 }
+                _chart._setData(); //set the geojson source
                 _chart._postRender(); //called after render is complete
             }
             else{
@@ -223,6 +224,7 @@ TODO:
         var _zoom = _options.zoom;
         var _popupData = undefined;
 
+
         //set the container in the options to be the same as what's in the parent so the user doesn't need to sepcify twice
         var _container = parent.replace("#", "")
         _options.container = _container
@@ -237,7 +239,7 @@ TODO:
 
 
         _chart.options = _options
-
+        _chart._idList = [];
 
 
         //Rendering and Drawing functions
@@ -251,7 +253,7 @@ TODO:
           _chart.map().on('moveend', boundsChangeFilter);
           _chart.map().on('zoomend', boundsChangeFilter);
           //
-
+          _chart.doFilter();
         };
 
 
@@ -266,7 +268,7 @@ TODO:
           });
           //
           //get the internal ids of each group within the current filter
-          _idList = groupsFiltered.map(function(k){
+          _chart._idList = groupsFiltered.map(function(k){
             return k._id})
 
           // this seems hacky
@@ -274,16 +276,23 @@ TODO:
           // we get an error on trying to filter before the style is done loading
           //presumably this is onl a problem on the init
           //not when the filter is actually being used during the session
+
+          setMapFilter(_chart._idList)
+          // dc.redrawAll(_chart.chartGroup()); //do redraw
+        };
+
+        var setMapFilter = function(idList){
           if (_chart.map().loaded()){
             // set the filter immediately
-            _chart.map().setFilter("points", ["in", "_id"].concat(_idList))
+            _chart.map().setFilter("points", ["in", "_id"].concat(idList))
+
           }else{
             _chart.map().on('load', function(){
               // set the filter as soon as the map has loaded
-              _chart.map().setFilter("points", ["in", "_id"].concat(_idList))
+              _chart.map().setFilter("points", ["in", "_id"].concat(idList))
             })
           }
-        };
+        }
 
 
         //filter handlers
@@ -305,6 +314,17 @@ TODO:
               }
               dc.redrawAll(_chart.chartGroup()); //do redraw
           });
+          _chart._doRedraw();
+        }
+
+        _chart.doFilter = function(){
+          if (_chart.map().loaded()){
+                boundsChangeFilter()
+          }else{
+              _chart.map().on('load', function(){
+                boundsChangeFilter()
+              })
+          }
         }
 
         var filterToBounds = function(bounds){
@@ -317,12 +337,19 @@ TODO:
             _chart.map().setFilter('points', null)
 
             //filter to points that lie within the bounds
-            _chart.map().setFilter("points", ['all',
-                                                [">", "lat", sw.lat],
-                                                ['<', 'lat', ne.lat],
-                                                ['>', 'lng', sw.lng],
-                                                ['<', 'lng', ne.lng]
-                                              ])
+            f = ['all',
+                      [">", "lat", sw.lat],
+                      ['<', 'lat', ne.lat],
+                      ['>', 'lng', sw.lng],
+                      ['<', 'lng', ne.lng],
+                ] //end f
+
+            if (_chart._idList.length > 0){
+              idFilter = ["in", "_id"].concat(_chart._idList)
+              f.push(idFilter)
+            }
+
+            _chart.map().setFilter("points", f)
         }
 
         var areaFilter = function(filter, filters){
@@ -340,7 +367,7 @@ TODO:
                 filterToBounds(filters[0])
             } // end if
           }
-
+          _chart.redraw();
         }
 
 
