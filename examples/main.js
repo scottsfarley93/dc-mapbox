@@ -7,7 +7,7 @@ var mapOptions = {
   pointType: "circle",
   pointIcon: undefined,
   center: new mapboxgl.LngLat(-74.0059, 40.7127),
-  zoom: 9,
+  zoom: 13,
   renderPopup: true,
   latitudeField: "Latitude",
   longitudeField: "Longitude"

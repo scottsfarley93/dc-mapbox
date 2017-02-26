@@ -253,7 +253,7 @@ TODO:
           _chart.map().on('moveend', boundsChangeFilter);
           _chart.map().on('zoomend', boundsChangeFilter);
           //
-
+          _chart.doFilter();
         };
 
 
@@ -315,6 +315,16 @@ TODO:
               dc.redrawAll(_chart.chartGroup()); //do redraw
           });
           _chart._doRedraw();
+        }
+
+        _chart.doFilter = function(){
+          if (_chart.map().loaded()){
+                boundsChangeFilter()
+          }else{
+              _chart.map().on('load', function(){
+                boundsChangeFilter()
+              })
+          }
         }
 
         var filterToBounds = function(bounds){
