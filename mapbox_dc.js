@@ -294,6 +294,10 @@ TODO:
           }
         }
 
+        _chart.clearFilter = function(){
+          _chart.map().setFilter('points', null)
+        }
+
 
         //filter handlers
 
